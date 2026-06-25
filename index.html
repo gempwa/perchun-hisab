@@ -5,12 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>PriceBook</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#ffffff">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <link rel="apple-touch-icon" href="https://placehold.co/192x192/2563eb/ffffff?text=PB">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
     <style>
         html { min-height: 100%; }
         body { margin: 0; font-family: 'Inter', sans-serif; background-color: #0f172a; min-height: 100dvh; }
@@ -29,6 +28,10 @@
         .modal-content { transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
         .modal-overlay.active .modal-content { transform: translateY(0); }
         
+        /* Center Modal Transitions (for Confirm Dialog) */
+        .center-modal-content { transform: scale(0.95); opacity: 0; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+        .modal-overlay.active .center-modal-content { transform: scale(1); opacity: 1; }
+
         /* Toast Transitions */
         .toast { transform: translateY(-150%); opacity: 0; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
         .toast.show { transform: translateY(0); opacity: 1; }
@@ -75,7 +78,7 @@
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
-                        Loading...
+                        Connecting to Database...
                     </div>
                 </div>
             </div>
@@ -137,7 +140,7 @@
                         
                         <div>
                             <label class="block text-sm font-semibold text-slate-700 mb-1.5">Product Name <span class="text-red-500">*</span></label>
-                            <input type="text" id="item-name" required class="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all">
+                            <input type="text" id="item-name" required placeholder="e.g. Urea Fertilizer 50kg" class="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all">
                         </div>
 
                         <div>
@@ -163,7 +166,7 @@
                             <label class="block text-sm font-semibold text-slate-700 mb-1.5">Price</label>
                             <div class="relative">
                                 <span class="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-500 font-medium">Rs.</span>
-                                <input type="number" id="item-price" min="0" step="any" class="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl pl-12 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all">
+                                <input type="number" id="item-price" min="0" step="any" placeholder="0.00" class="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl pl-12 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all">
                             </div>
                         </div>
 
@@ -173,14 +176,14 @@
                                 <label class="block text-sm font-semibold text-slate-700 mb-1.5">Min Price</label>
                                 <div class="relative">
                                     <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500">Rs.</span>
-                                    <input type="number" id="item-price-min" min="0" step="any" class="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl pl-10 pr-3 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <input type="number" id="item-price-min" min="0" step="any" placeholder="0" class="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl pl-10 pr-3 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500">
                                 </div>
                             </div>
                             <div>
                                 <label class="block text-sm font-semibold text-slate-700 mb-1.5">Max Price</label>
                                 <div class="relative">
                                     <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500">Rs.</span>
-                                    <input type="number" id="item-price-max" min="0" step="any" class="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl pl-10 pr-3 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <input type="number" id="item-price-max" min="0" step="any" placeholder="0" class="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl pl-10 pr-3 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500">
                                 </div>
                             </div>
                         </div>
@@ -191,14 +194,14 @@
                                 <label class="block text-sm font-semibold text-emerald-700 mb-1.5">Cash Price</label>
                                 <div class="relative">
                                     <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500">Rs.</span>
-                                    <input type="number" id="item-price-cash" min="0" step="any" class="w-full bg-emerald-50 border border-emerald-200 text-slate-800 rounded-xl pl-10 pr-3 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                                    <input type="number" id="item-price-cash" min="0" step="any" placeholder="0" class="w-full bg-emerald-50 border border-emerald-200 text-slate-800 rounded-xl pl-10 pr-3 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500">
                                 </div>
                             </div>
                             <div>
                                 <label class="block text-sm font-semibold text-amber-700 mb-1.5">Late Payment</label>
                                 <div class="relative">
                                     <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500">Rs.</span>
-                                    <input type="number" id="item-price-late" min="0" step="any" class="w-full bg-amber-50 border border-amber-200 text-slate-800 rounded-xl pl-10 pr-3 py-3 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                                    <input type="number" id="item-price-late" min="0" step="any" placeholder="0" class="w-full bg-amber-50 border border-amber-200 text-slate-800 rounded-xl pl-10 pr-3 py-3 focus:outline-none focus:ring-2 focus:ring-amber-500">
                                 </div>
                             </div>
                         </div>
@@ -223,7 +226,7 @@
         </div>
 
         <!-- View Item Details Modal -->
-        <div id="view-modal" class="fixed inset-0 z-[60] flex items-end justify-center modal-overlay">
+        <div id="view-modal" class="fixed inset-0 z-[60] flex items-end justify-center modal-overlay hidden">
             <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" id="view-modal-bg"></div>
             <div class="bg-white w-full max-w-md rounded-t-3xl shadow-2xl relative z-10 modal-content overflow-hidden flex flex-col max-h-[85dvh]">
                 <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/80 sticky top-0">
@@ -242,8 +245,24 @@
             </div>
         </div>
 
+        <!-- Custom Confirm Modal (Replacing forbidden window.confirm) -->
+        <div id="confirm-modal" class="fixed inset-0 z-[80] flex items-center justify-center modal-overlay hidden">
+            <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" id="confirm-modal-bg"></div>
+            <div class="bg-white w-[85%] max-w-sm rounded-2xl shadow-2xl relative z-10 p-6 center-modal-content flex flex-col">
+                <div class="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mb-4 mx-auto">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                </div>
+                <h3 class="text-lg font-bold text-slate-900 mb-2 text-center" id="confirm-title">Confirm Deletion</h3>
+                <p class="text-sm text-slate-600 mb-6 text-center" id="confirm-message">Are you sure you want to delete this item? This cannot be undone.</p>
+                <div class="flex gap-3 mt-auto">
+                    <button id="confirm-cancel" class="flex-1 px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition-colors">Cancel</button>
+                    <button id="confirm-ok" class="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl transition-colors shadow-md shadow-red-600/20">Delete</button>
+                </div>
+            </div>
+        </div>
+
         <!-- Toast Notification Container -->
-        <div id="toast-container" class="fixed top-5 left-1/2 transform -translate-x-1/2 z-[70] flex flex-col gap-2 w-[90%] max-w-[400px] pointer-events-none"></div>
+        <div id="toast-container" class="fixed top-5 left-1/2 transform -translate-x-1/2 z-[90] flex flex-col gap-2 w-[90%] max-w-[400px] pointer-events-none"></div>
 
     </div>
 
@@ -252,7 +271,7 @@
         import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Global State
+        // Global State Management
         const state = {
             products: [],
             searchQuery: '',
@@ -263,20 +282,20 @@
             appId: typeof __app_id !== 'undefined' ? __app_id : 'pricebook-app-v1'
         };
 
-        // Utility: Escape HTML to prevent XSS
+        // Utility: Escape HTML to prevent XSS attacks when rendering user content
         function escapeHTML(str) {
             if (!str) return '';
-            return str.replace(/[&<>'"]/g, tag => ({
+            return str.toString().replace(/[&<>'"]/g, tag => ({
                 '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
             }[tag]));
         }
 
-        // Utility: Generate temporary ID
+        // Utility: Generate temporary unique ID for new products
         function generateId() {
             return 'prod_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
         }
 
-        // DOM Elements setup
+        // DOM Element Caching
         const DOM = {
             searchInput: document.getElementById('search-input'),
             clearSearch: document.getElementById('clear-search'),
@@ -290,10 +309,12 @@
             // Modals
             formModal: document.getElementById('form-modal'),
             viewModal: document.getElementById('view-modal'),
+            confirmModal: document.getElementById('confirm-modal'),
             closeFormBtn: document.getElementById('close-form-btn'),
             closeViewBtn: document.getElementById('close-view-btn'),
             formModalBg: document.getElementById('form-modal-bg'),
             viewModalBg: document.getElementById('view-modal-bg'),
+            confirmModalBg: document.getElementById('confirm-modal-bg'),
             
             // Form Elements
             itemForm: document.getElementById('item-form'),
@@ -304,10 +325,12 @@
             saveItemBtn: document.getElementById('save-item-btn'),
             categoryList: document.getElementById('category-list'),
             
-            // View Elements
+            // View & Confirm Elements
             viewModalContent: document.getElementById('view-modal-content'),
             btnEditItem: document.getElementById('btn-edit-item'),
             btnDeleteItem: document.getElementById('btn-delete-item'),
+            confirmCancelBtn: document.getElementById('confirm-cancel'),
+            confirmOkBtn: document.getElementById('confirm-ok'),
             
             toastContainer: document.getElementById('toast-container'),
             connectionIndicator: document.getElementById('connection-indicator')
@@ -326,7 +349,7 @@
             `;
             DOM.toastContainer.appendChild(toast);
             
-            // Trigger animation
+            // Trigger animation on next frame
             requestAnimationFrame(() => { toast.classList.add('show'); });
             
             setTimeout(() => {
@@ -336,11 +359,44 @@
         }
 
         function openModal(modalEl) {
+            modalEl.classList.remove('hidden');
+            // Force reflow
+            void modalEl.offsetWidth;
             modalEl.classList.add('active');
         }
 
         function closeModal(modalEl) {
             modalEl.classList.remove('active');
+            setTimeout(() => {
+                if(!modalEl.classList.contains('active')) {
+                    modalEl.classList.add('hidden');
+                }
+            }, 300); // match css transition duration
+        }
+
+        // Custom Confirm Dialog (replaces window.confirm)
+        function showConfirm(message, onConfirm) {
+            document.getElementById('confirm-message').textContent = message;
+            
+            const handleConfirm = () => {
+                cleanup();
+                onConfirm();
+            };
+            
+            const handleCancel = () => { cleanup(); };
+            
+            const cleanup = () => {
+                closeModal(DOM.confirmModal);
+                DOM.confirmOkBtn.removeEventListener('click', handleConfirm);
+                DOM.confirmCancelBtn.removeEventListener('click', handleCancel);
+                DOM.confirmModalBg.removeEventListener('click', handleCancel);
+            };
+
+            DOM.confirmOkBtn.addEventListener('click', handleConfirm);
+            DOM.confirmCancelBtn.addEventListener('click', handleCancel);
+            DOM.confirmModalBg.addEventListener('click', handleCancel);
+            
+            openModal(DOM.confirmModal);
         }
 
         function switchTab(tabId) {
@@ -376,7 +432,7 @@
                 svg.innerHTML = icons[tab][isActive ? 'active' : 'inactive'];
             });
 
-            // Toggle FAB & Search based on tab
+            // Toggle FAB & Search visibility based on current tab context
             DOM.fabAdd.style.display = (tabId === 'info') ? 'none' : 'flex';
             document.getElementById('search-container').style.display = (tabId === 'home') ? 'block' : 'none';
 
@@ -395,6 +451,7 @@
         window.addEventListener('online', updateSyncStatus);
         window.addEventListener('offline', updateSyncStatus);
 
+        // Formatting logic for dynamic pricing structures
         function formatPrice(p) {
             if (p.pricingType === 'range') {
                 return `<div class="text-sm font-bold text-slate-800">Rs. ${p.price} <span class="text-slate-400 font-normal text-xs mx-1">to</span> Rs. ${p.priceMax}</div>`;
@@ -562,7 +619,7 @@
                     </p>
                     <div class="bg-blue-50 text-blue-800 text-xs p-3 rounded-xl border border-blue-100 flex items-start gap-2">
                         <svg class="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                        <p>When offline, you can still view and add prices. Changes will sync automatically when your internet connection is restored.</p>
+                        <p>Changes will sync automatically between all your authorized users instantly.</p>
                     </div>
                 </div>
             `;
@@ -618,7 +675,7 @@
             DOM.priceDualContainer.classList.toggle('hidden', val !== 'dual');
         });
 
-        // View Logic
+        // Global view product function attached to window for inline HTML handlers
         window.viewProduct = function(id) {
             const p = state.products.find(x => x.id === id);
             if (!p) return;
@@ -673,7 +730,7 @@
             };
             
             DOM.btnDeleteItem.onclick = () => {
-                if(confirm(`Are you sure you want to delete ${p.name}?`)) deleteProduct(p.id);
+                showConfirm(`Are you sure you want to delete ${escapeHTML(p.name)}?`, () => deleteProduct(p.id));
             };
 
             openModal(DOM.viewModal);
@@ -702,16 +759,23 @@
         }
 
         let db;
+        let authObj;
 
         async function saveProduct() {
+            // First check native form validation (required fields)
+            if(!DOM.itemForm.checkValidity()) {
+                DOM.itemForm.reportValidity();
+                return;
+            }
+
+            if(!authObj || !authObj.currentUser) {
+                showToast("Not authenticated. Cannot save.", "error");
+                return;
+            }
+
             const id = document.getElementById('item-id').value || generateId();
             const name = document.getElementById('item-name').value.trim();
             const type = DOM.pricingType.value;
-            
-            if (!name) {
-                showToast("Product name is required", "error");
-                return;
-            }
 
             const itemData = {
                 id: id,
@@ -734,7 +798,7 @@
             }
 
             try {
-                // Rule 1: Strict public path
+                // Mandatory Rule 1: Strict public path mapping
                 const docRef = doc(db, 'artifacts', state.appId, 'public', 'data', 'products', id);
                 
                 // Set button state to loading
@@ -757,6 +821,7 @@
         }
 
         async function deleteProduct(id) {
+            if(!authObj || !authObj.currentUser) return;
             try {
                 const docRef = doc(db, 'artifacts', state.appId, 'public', 'data', 'products', id);
                 await deleteDoc(docRef);
@@ -772,29 +837,43 @@
 
         async function initApp() {
             try {
-                // Firebase Setup
-                const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+                // Robust Firebase Config parsing
+                let firebaseConfig = {};
+                if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+                    try {
+                        firebaseConfig = JSON.parse(__firebase_config);
+                    } catch(e) {
+                        console.warn("Could not parse __firebase_config, relying on defaults if available.");
+                    }
+                }
+
                 const app = initializeApp(firebaseConfig);
-                const auth = getAuth(app);
+                authObj = getAuth(app);
                 db = getFirestore(app);
 
-                // Rule 3: Auth BEFORE queries
-                if (typeof __initial_auth_token !== 'undefined') {
-                    await signInWithCustomToken(auth, __initial_auth_token);
+                // Mandatory Rule 3: Auth BEFORE queries. Await auth completion securely.
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(authObj, __initial_auth_token);
                 } else {
-                    await signInAnonymously(auth);
+                    await signInAnonymously(authObj);
                 }
-                state.currentUserUid = auth.currentUser.uid;
+                
+                if (!authObj.currentUser) {
+                    throw new Error("Authentication failed entirely.");
+                }
+                
+                state.currentUserUid = authObj.currentUser.uid;
 
-                // Rule 2: No Complex Queries. Fetch all, sort locally.
+                // Mandatory Rule 2: No Complex Queries. Fetch all, sort in JS.
                 const productsRef = collection(db, 'artifacts', state.appId, 'public', 'data', 'products');
                 
+                // Set up Realtime Sync
                 onSnapshot(productsRef, (snapshot) => {
-                    // Handle Real-time notifications for UX requirement
+                    // Handle Real-time notifications for cross-device updates
                     if (!state.isInitialLoad) {
                         snapshot.docChanges().forEach(change => {
                             const data = change.doc.data();
-                            // Notify if another user made the change
+                            // Notify if another user (or another session) made the change
                             if (data.lastUpdatedBy !== state.currentUserUid) {
                                 if (change.type === 'added') showToast(`New item added: ${data.name}`, 'info');
                                 if (change.type === 'modified') showToast(`Price updated: ${data.name}`, 'info');
@@ -803,10 +882,10 @@
                         });
                     }
 
-                    // Update Local State
+                    // Update Local Memory State
                     state.products = snapshot.docs.map(doc => doc.data());
                     
-                    // Sort globally A-Z for consistent rendering
+                    // Sort globally A-Z for consistent rendering in memory
                     state.products.sort((a,b) => a.name.localeCompare(b.name));
                     
                     state.isInitialLoad = false;
@@ -821,24 +900,17 @@
 
             } catch (error) {
                 console.error("Initialization Error:", error);
-                DOM.homeContent.innerHTML = `<div class="text-center py-10 text-slate-500">Working Offline</div>`;
-            }
-        }
-
-        async function registerServiceWorker() {
-            if ('serviceWorker' in navigator) {
-                try {
-                    const registration = await navigator.serviceWorker.register('./sw.js');
-                    console.log('Service Worker registered:', registration.scope);
-                } catch (error) {
-                    console.warn('Service Worker registration failed:', error);
-                }
+                DOM.homeContent.innerHTML = `
+                    <div class="text-center py-12 px-6 flex flex-col items-center">
+                        <svg class="w-12 h-12 text-slate-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                        <h3 class="text-lg font-bold text-slate-700 mb-1">Connection Offline</h3>
+                        <p class="text-sm text-slate-500">The application failed to initialize the database connection. Please check your network and refresh.</p>
+                    </div>`;
             }
         }
 
         // Boot
         initApp();
-        registerServiceWorker();
 
     </script>
 </body>
