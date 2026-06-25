@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PriceBook</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; }
+        .app-container { max-width: 480px; margin: 0 auto; background: #f8fafc; height: 100dvh; display: flex; flex-direction: column; position: relative; box-shadow: 0 0 25px rgba(0,0,0,0.5); }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* Tab Transitions */
+        .tab-content { display: none; animation: fadeIn 0.25s ease-out; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* Modal Transitions */
+        .modal-overlay { opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .modal-content { transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .modal-overlay.active .modal-content { transform: translateY(0); }
+        
+        /* Toast Transitions */
+        .toast { transform: translateY(-150%); opacity: 0; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        .toast.show { transform: translateY(0); opacity: 1; }
+
+        /* Safe area support for modern mobile browsers */
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom, 16px); }
+    </style>
+</head>
+<body class="text-slate-800 antialiased selection:bg-blue-200">
+
+    <div class="app-container overflow-hidden">
+        
+        <!-- Header -->
+        <header class="bg-white px-5 py-4 border-b border-slate-200 z-10 flex-shrink-0 flex items-center justify-between shadow-sm relative">
+            <h1 class="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                </svg>
+                PriceBook
+            </h1>
+            <div id="connection-indicator" class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]" title="Online"></div>
+        </header>
+
+        <!-- Search Bar (Visible primarily on Home) -->
+        <div id="search-container" class="bg-white px-4 py-3 border-b border-slate-100 flex-shrink-0 z-10">
+            <div class="relative">
+                <svg class="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+                <input type="text" id="search-input" placeholder="Search products or categories..." class="w-full bg-slate-100 text-slate-800 text-sm rounded-xl pl-10 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all placeholder-slate-400">
+                <button id="clear-search" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 hidden">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+        </div>
+
+        <main class="flex-1 overflow-y-auto no-scrollbar relative p-4 pb-24" id="main-scroll">
+            
+            <!-- Home Tab -->
+            <div id="tab-home" class="tab-content active">
+                <div id="home-content">
+                    <div class="flex justify-center items-center h-40 text-slate-400">
+                        <svg class="animate-spin h-6 w-6 mr-3" viewBox="0 0 24 24" fill="none">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Loading...
+                    </div>
+                </div>
+            </div>
+            
+            <!-- List Tab (Categories) -->
+            <div id="tab-list" class="tab-content">
+                <div id="list-content"></div>
+            </div>
+            
+            <!-- Info Tab (Sync & Stats) -->
+            <div id="tab-info" class="tab-content">
+                <div id="info-content"></div>
+            </div>
+
+        </main>
+
+        <!-- Add Item FAB -->
+        <button id="fab-add" class="absolute bottom-20 right-5 w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg shadow-blue-600/40 flex items-center justify-center transform transition-all active:scale-95 hover:bg-blue-700 z-20">
+            <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+            </svg>
+        </button>
+
+        <!-- Bottom Navigation -->
+        <nav class="absolute bottom-0 w-full bg-white border-t border-slate-200 flex justify-around pb-safe z-30 shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.03)]">
+            <button class="nav-btn flex-1 py-3 flex flex-col items-center gap-1 text-blue-600 transition-colors" data-tab="home">
+                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"></path>
+                </svg>
+                <span class="text-[10px] font-semibold">Home</span>
+            </button>
+            <button class="nav-btn flex-1 py-3 flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600 transition-colors" data-tab="list">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>
+                </svg>
+                <span class="text-[10px] font-semibold">List</span>
+            </button>
+            <button class="nav-btn flex-1 py-3 flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600 transition-colors" data-tab="info">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <span class="text-[10px] font-semibold">Info</span>
+            </button>
+        </nav>
+
+        <!-- Add/Edit Form Modal -->
+        <div id="form-modal" class="fixed inset-0 z-[60] flex items-end justify-center modal-overlay">
+            <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" id="form-modal-bg"></div>
+            <div class="bg-white w-full max-w-md rounded-t-3xl shadow-2xl relative z-10 modal-content flex flex-col max-h-[90dvh]">
+                <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-white rounded-t-3xl sticky top-0 z-20">
+                    <h3 class="font-bold text-slate-800 text-lg" id="form-modal-title">Add New Price</h3>
+                    <button id="close-form-btn" class="p-2 text-slate-400 hover:text-slate-700 bg-slate-50 hover:bg-slate-100 rounded-full transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+                <div class="p-5 overflow-y-auto no-scrollbar">
+                    <form id="item-form" class="space-y-5">
+                        <input type="hidden" id="item-id">
+                        
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1.5">Product Name <span class="text-red-500">*</span></label>
+                            <input type="text" id="item-name" required class="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1.5">Category</label>
+                            <input type="text" id="item-category" list="category-list" placeholder="e.g. Pesticides, Seeds" class="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all">
+                            <datalist id="category-list"></datalist>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1.5">Pricing Type</label>
+                            <div class="relative">
+                                <select id="item-pricing-type" class="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-4 py-3 appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all">
+                                    <option value="single">Fixed Price</option>
+                                    <option value="range">Price Range (Min - Max)</option>
+                                    <option value="dual">Dual Price (Cash / Late)</option>
+                                </select>
+                                <svg class="w-5 h-5 absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </div>
+                        </div>
+
+                        <!-- Single Price Input -->
+                        <div id="price-single-container">
+                            <label class="block text-sm font-semibold text-slate-700 mb-1.5">Price</label>
+                            <div class="relative">
+                                <span class="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-500 font-medium">Rs.</span>
+                                <input type="number" id="item-price" min="0" step="any" class="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl pl-12 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all">
+                            </div>
+                        </div>
+
+                        <!-- Range Price Input -->
+                        <div id="price-range-container" class="hidden grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1.5">Min Price</label>
+                                <div class="relative">
+                                    <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500">Rs.</span>
+                                    <input type="number" id="item-price-min" min="0" step="any" class="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl pl-10 pr-3 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1.5">Max Price</label>
+                                <div class="relative">
+                                    <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500">Rs.</span>
+                                    <input type="number" id="item-price-max" min="0" step="any" class="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl pl-10 pr-3 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Dual Price Input -->
+                        <div id="price-dual-container" class="hidden grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-semibold text-emerald-700 mb-1.5">Cash Price</label>
+                                <div class="relative">
+                                    <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500">Rs.</span>
+                                    <input type="number" id="item-price-cash" min="0" step="any" class="w-full bg-emerald-50 border border-emerald-200 text-slate-800 rounded-xl pl-10 pr-3 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-amber-700 mb-1.5">Late Payment</label>
+                                <div class="relative">
+                                    <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500">Rs.</span>
+                                    <input type="number" id="item-price-late" min="0" step="any" class="w-full bg-amber-50 border border-amber-200 text-slate-800 rounded-xl pl-10 pr-3 py-3 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Pin Toggle -->
+                        <div class="flex items-center justify-between py-2 border-t border-slate-100 mt-4">
+                            <div>
+                                <h4 class="text-sm font-semibold text-slate-800">Pin to Home</h4>
+                                <p class="text-xs text-slate-500">Keep this item visible at the top</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="item-pinned" class="sr-only peer">
+                                <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+                    </form>
+                </div>
+                <div class="p-5 border-t border-slate-100 bg-white pb-safe rounded-b-3xl">
+                    <button type="button" id="save-item-btn" class="w-full bg-blue-600 text-white font-semibold py-3.5 rounded-xl hover:bg-blue-700 transition-colors shadow-md shadow-blue-600/20">Save Product</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- View Item Details Modal -->
+        <div id="view-modal" class="fixed inset-0 z-[60] flex items-end justify-center modal-overlay">
+            <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" id="view-modal-bg"></div>
+            <div class="bg-white w-full max-w-md rounded-t-3xl shadow-2xl relative z-10 modal-content overflow-hidden flex flex-col max-h-[85dvh]">
+                <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/80 sticky top-0">
+                    <h3 class="font-bold text-slate-800 text-lg">Details</h3>
+                    <button id="close-view-btn" class="p-2 text-slate-400 hover:text-slate-700 bg-white hover:bg-slate-100 rounded-full transition-colors border border-slate-100 shadow-sm">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+                <div class="p-6 overflow-y-auto" id="view-modal-content">
+                    <!-- Dynamic Details Injected Here -->
+                </div>
+                <div class="p-5 border-t border-slate-100 bg-slate-50 flex gap-3 pb-safe">
+                    <button id="btn-edit-item" class="flex-1 bg-white border border-slate-200 text-slate-800 font-semibold py-3 rounded-xl hover:bg-slate-100 transition-colors shadow-sm">Edit Item</button>
+                    <button id="btn-delete-item" class="flex-1 bg-red-50 text-red-600 font-semibold py-3 rounded-xl hover:bg-red-100 transition-colors border border-red-100 shadow-sm">Delete</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toast Notification Container -->
+        <div id="toast-container" class="fixed top-5 left-1/2 transform -translate-x-1/2 z-[70] flex flex-col gap-2 w-[90%] max-w-[400px] pointer-events-none"></div>
+
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Global State
+        const state = {
+            products: [],
+            searchQuery: '',
+            currentTab: 'home',
+            isOnline: navigator.onLine,
+            isInitialLoad: true,
+            currentUserUid: null,
+            appId: typeof __app_id !== 'undefined' ? __app_id : 'pricebook-app-v1'
+        };
+
+        // Utility: Escape HTML to prevent XSS
+        function escapeHTML(str) {
+            if (!str) return '';
+            return str.replace(/[&<>'"]/g, tag => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+            }[tag]));
+        }
+
+        // Utility: Generate temporary ID
+        function generateId() {
+            return 'prod_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+        }
+
+        // DOM Elements setup
+        const DOM = {
+            searchInput: document.getElementById('search-input'),
+            clearSearch: document.getElementById('clear-search'),
+            navBtns: document.querySelectorAll('.nav-btn'),
+            tabs: document.querySelectorAll('.tab-content'),
+            homeContent: document.getElementById('home-content'),
+            listContent: document.getElementById('list-content'),
+            infoContent: document.getElementById('info-content'),
+            fabAdd: document.getElementById('fab-add'),
+            
+            // Modals
+            formModal: document.getElementById('form-modal'),
+            viewModal: document.getElementById('view-modal'),
+            closeFormBtn: document.getElementById('close-form-btn'),
+            closeViewBtn: document.getElementById('close-view-btn'),
+            formModalBg: document.getElementById('form-modal-bg'),
+            viewModalBg: document.getElementById('view-modal-bg'),
+            
+            // Form Elements
+            itemForm: document.getElementById('item-form'),
+            pricingType: document.getElementById('item-pricing-type'),
+            priceSingleContainer: document.getElementById('price-single-container'),
+            priceRangeContainer: document.getElementById('price-range-container'),
+            priceDualContainer: document.getElementById('price-dual-container'),
+            saveItemBtn: document.getElementById('save-item-btn'),
+            categoryList: document.getElementById('category-list'),
+            
+            // View Elements
+            viewModalContent: document.getElementById('view-modal-content'),
+            btnEditItem: document.getElementById('btn-edit-item'),
+            btnDeleteItem: document.getElementById('btn-delete-item'),
+            
+            toastContainer: document.getElementById('toast-container'),
+            connectionIndicator: document.getElementById('connection-indicator')
+        };
+
+        // UI Helpers
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            const bgClass = type === 'success' ? 'bg-emerald-600' : (type === 'error' ? 'bg-red-600' : 'bg-slate-800');
+            toast.className = `toast ${bgClass} text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-3 text-sm font-medium w-full`;
+            toast.innerHTML = `
+                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    ${type === 'success' ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>' : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>'}
+                </svg>
+                <span>${escapeHTML(message)}</span>
+            `;
+            DOM.toastContainer.appendChild(toast);
+            
+            // Trigger animation
+            requestAnimationFrame(() => { toast.classList.add('show'); });
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 400);
+            }, 3000);
+        }
+
+        function openModal(modalEl) {
+            modalEl.classList.add('active');
+        }
+
+        function closeModal(modalEl) {
+            modalEl.classList.remove('active');
+        }
+
+        function switchTab(tabId) {
+            state.currentTab = tabId;
+            DOM.tabs.forEach(tab => {
+                tab.classList.toggle('active', tab.id === `tab-${tabId}`);
+            });
+            
+            DOM.navBtns.forEach(btn => {
+                const isActive = btn.dataset.tab === tabId;
+                btn.classList.toggle('text-blue-600', isActive);
+                btn.classList.toggle('text-slate-400', !isActive);
+                
+                // Switch icon styles active/inactive
+                const svg = btn.querySelector('svg');
+                if (isActive) {
+                    svg.setAttribute('fill', 'currentColor');
+                    svg.removeAttribute('stroke');
+                    if (tabId === 'list') svg.innerHTML = '<path d="M4 4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V6a2 2 0 00-2-2H4zm0 2h16v12H4V6zm2 3h12v2H6V9zm0 4h12v2H6v-2z"></path>';
+                    if (tabId === 'info') svg.innerHTML = '<path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>';
+                } else {
+                    svg.setAttribute('fill', 'none');
+                    svg.setAttribute('stroke', 'currentColor');
+                    if (tabId === 'home') svg.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>';
+                    if (tabId === 'list') svg.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>';
+                    if (tabId === 'info') svg.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>';
+                }
+            });
+
+            // Toggle FAB & Search based on tab
+            DOM.fabAdd.style.display = (tabId === 'info') ? 'none' : 'flex';
+            document.getElementById('search-container').style.display = (tabId === 'home') ? 'block' : 'none';
+
+            renderCurrentTab();
+        }
+
+        function updateSyncStatus() {
+            state.isOnline = navigator.onLine;
+            DOM.connectionIndicator.className = state.isOnline 
+                ? "w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]" 
+                : "w-2.5 h-2.5 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]";
+            DOM.connectionIndicator.title = state.isOnline ? "Online" : "Offline";
+            if (state.currentTab === 'info') renderInfo();
+        }
+
+        window.addEventListener('online', updateSyncStatus);
+        window.addEventListener('offline', updateSyncStatus);
+
+        function formatPrice(p) {
+            if (p.pricingType === 'range') {
+                return `<div class="text-sm font-bold text-slate-800">Rs. ${p.price} <span class="text-slate-400 font-normal text-xs mx-1">to</span> Rs. ${p.priceMax}</div>`;
+            } else if (p.pricingType === 'dual') {
+                return `<div class="flex flex-col items-end gap-1.5 mt-1">
+                           <div class="text-[11px] font-semibold bg-emerald-50 text-emerald-700 px-2.5 py-0.5 rounded-md border border-emerald-100 flex items-center gap-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg> Cash: Rs. ${p.price}</div>
+                           <div class="text-[11px] font-semibold bg-amber-50 text-amber-700 px-2.5 py-0.5 rounded-md border border-amber-100 flex items-center gap-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> Late: Rs. ${p.priceLate}</div>
+                        </div>`;
+            } else {
+                return `<div class="text-sm font-bold text-slate-800">Rs. ${p.price}</div>`;
+            }
+        }
+
+        function renderProductCard(p) {
+            const catBadge = p.category ? `<span class="text-[10px] font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 mt-1.5 inline-block">${escapeHTML(p.category)}</span>` : '';
+            const pinIcon = p.isPinned ? `<svg class="w-3.5 h-3.5 text-blue-500 mb-1" fill="currentColor" viewBox="0 0 20 20"><path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z"></path></svg>` : '';
+            
+            return `
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 mb-3 flex justify-between items-start cursor-pointer hover:shadow-md hover:border-blue-100 transition-all active:scale-[0.98]" onclick="viewProduct('${p.id}')">
+                    <div class="flex-1 pr-3">
+                        <div class="flex items-center gap-2">
+                            ${pinIcon}
+                            <h3 class="font-bold text-slate-800 text-[15px] leading-tight">${escapeHTML(p.name)}</h3>
+                        </div>
+                        ${catBadge}
+                    </div>
+                    <div class="text-right flex-shrink-0">
+                        ${formatPrice(p)}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderHome() {
+            let html = '';
+            const query = state.searchQuery.toLowerCase().trim();
+            
+            if (query) {
+                const filtered = state.products.filter(p => 
+                    p.name.toLowerCase().includes(query) || 
+                    (p.category || '').toLowerCase().includes(query)
+                );
+                
+                html += `<h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 px-1">Search Results (${filtered.length})</h2>`;
+                if (filtered.length === 0) {
+                    html += `<div class="text-center py-10 text-slate-500 text-sm">No items found matching "${escapeHTML(query)}"</div>`;
+                } else {
+                    html += filtered.map(renderProductCard).join('');
+                }
+            } else {
+                const pinned = state.products.filter(p => p.isPinned);
+                html += `<div class="flex items-center justify-between mb-3 px-1 mt-1">
+                            <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                                <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z"></path></svg> Pinned Prices
+                            </h2>
+                         </div>`;
+                
+                if (pinned.length === 0) {
+                    html += `
+                        <div class="text-center py-12 bg-white rounded-2xl border border-dashed border-slate-300">
+                            <div class="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-3 text-slate-300">
+                                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z"></path></svg>
+                            </div>
+                            <p class="text-slate-600 text-sm font-medium">No pinned prices yet</p>
+                            <p class="text-slate-400 text-xs mt-1 px-8">Pin frequently used items to access them quickly here.</p>
+                        </div>
+                    `;
+                } else {
+                    html += pinned.map(renderProductCard).join('');
+                }
+            }
+            
+            DOM.homeContent.innerHTML = html;
+        }
+
+        function renderList() {
+            const grouped = {};
+            const uncategorized = [];
+            
+            state.products.forEach(p => {
+                const cat = p.category ? p.category.trim() : '';
+                if (!cat) uncategorized.push(p);
+                else {
+                    if (!grouped[cat]) grouped[cat] = [];
+                    grouped[cat].push(p);
+                }
+            });
+            
+            const sortedCats = Object.keys(grouped).sort();
+            let html = '';
+            
+            sortedCats.forEach(cat => {
+                const items = grouped[cat].sort((a,b) => a.name.localeCompare(b.name));
+                html += `
+                    <div class="mb-6">
+                        <div class="flex items-center gap-2 mb-3 px-1 sticky top-0 bg-[#f8fafc] py-2 z-10">
+                            <div class="w-2 h-2 rounded-full bg-blue-500"></div>
+                            <h2 class="text-[13px] font-bold text-slate-700 uppercase tracking-wide">${escapeHTML(cat)}</h2>
+                            <span class="text-xs text-slate-400 ml-auto">${items.length} items</span>
+                        </div>
+                        <div>${items.map(renderProductCard).join('')}</div>
+                    </div>
+                `;
+            });
+            
+            if (uncategorized.length > 0) {
+                const items = uncategorized.sort((a,b) => a.name.localeCompare(b.name));
+                html += `
+                    <div class="mb-6 opacity-90">
+                        <div class="flex items-center gap-2 mb-3 px-1 sticky top-0 bg-[#f8fafc] py-2 z-10">
+                            <div class="w-2 h-2 rounded-full bg-slate-300"></div>
+                            <h2 class="text-[13px] font-bold text-slate-500 uppercase tracking-wide">Uncategorized</h2>
+                            <span class="text-xs text-slate-400 ml-auto">${items.length} items</span>
+                        </div>
+                        <div>${items.map(renderProductCard).join('')}</div>
+                    </div>
+                `;
+            }
+            
+            if (state.products.length === 0) {
+                html = `<div class="text-center py-10 text-slate-500 text-sm flex flex-col items-center">
+                            <svg class="w-12 h-12 text-slate-200 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path></svg>
+                            Catalog is empty. Tap + to add items.
+                        </div>`;
+            }
+            
+            DOM.listContent.innerHTML = html;
+        }
+
+        function renderInfo() {
+            const totalItems = state.products.length;
+            const categoriesSet = new Set();
+            state.products.forEach(p => { if (p.category) categoriesSet.add(p.category.trim()); });
+            const catCount = categoriesSet.size;
+            
+            const syncUI = state.isOnline 
+                ? `<span class="inline-flex items-center text-xs text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-md font-bold tracking-wide"><span class="w-2 h-2 rounded-full bg-emerald-500 mr-2 animate-pulse"></span>ONLINE</span>`
+                : `<span class="inline-flex items-center text-xs text-amber-700 bg-amber-100 px-2.5 py-1 rounded-md font-bold tracking-wide"><span class="w-2 h-2 rounded-full bg-amber-500 mr-2"></span>OFFLINE</span>`;
+
+            DOM.infoContent.innerHTML = `
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 mb-5 overflow-hidden relative">
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-full -z-10 opacity-50"></div>
+                    <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-5">System Status</h2>
+                    
+                    <div class="flex items-center justify-between mb-4 pb-4 border-b border-slate-50">
+                        <span class="text-sm font-medium text-slate-600 flex items-center gap-2"><svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg> Connection</span>
+                        ${syncUI}
+                    </div>
+                    
+                    <div class="flex items-center justify-between mb-4 pb-4 border-b border-slate-50">
+                        <span class="text-sm font-medium text-slate-600 flex items-center gap-2"><svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path></svg> Total Products</span>
+                        <span class="font-bold text-slate-800 text-lg">${totalItems}</span>
+                    </div>
+                    
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium text-slate-600 flex items-center gap-2"><svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path></svg> Categories</span>
+                        <span class="font-bold text-slate-800 text-lg">${catCount}</span>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+                    <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">About App</h2>
+                    <p class="text-sm text-slate-600 leading-relaxed mb-4">
+                        PriceBook automatically syncs prices across all connected devices in real-time. 
+                    </p>
+                    <div class="bg-blue-50 text-blue-800 text-xs p-3 rounded-xl border border-blue-100 flex items-start gap-2">
+                        <svg class="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        <p>When offline, you can still view and add prices. Changes will sync automatically when your internet connection is restored.</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderCurrentTab() {
+            if (state.currentTab === 'home') renderHome();
+            else if (state.currentTab === 'list') renderList();
+            else if (state.currentTab === 'info') renderInfo();
+        }
+
+        function updateCategoryDatalist() {
+            const categories = new Set(state.products.map(p => p.category).filter(Boolean));
+            DOM.categoryList.innerHTML = Array.from(categories).sort().map(c => `<option value="${escapeHTML(c)}">`).join('');
+        }
+
+        // Search logic
+        DOM.searchInput.addEventListener('input', (e) => {
+            state.searchQuery = e.target.value;
+            DOM.clearSearch.classList.toggle('hidden', !state.searchQuery);
+            if(state.currentTab !== 'home') switchTab('home');
+            renderHome();
+        });
+
+        DOM.clearSearch.addEventListener('click', () => {
+            DOM.searchInput.value = '';
+            state.searchQuery = '';
+            DOM.clearSearch.classList.add('hidden');
+            renderHome();
+        });
+
+        // Tab Switching
+        DOM.navBtns.forEach(btn => {
+            btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+        });
+
+        // Add/Edit Form Logic
+        DOM.fabAdd.addEventListener('click', () => {
+            document.getElementById('form-modal-title').textContent = 'Add New Price';
+            DOM.itemForm.reset();
+            document.getElementById('item-id').value = '';
+            DOM.pricingType.dispatchEvent(new Event('change')); // reset visibility
+            openModal(DOM.formModal);
+        });
+
+        DOM.closeFormBtn.addEventListener('click', () => closeModal(DOM.formModal));
+        DOM.formModalBg.addEventListener('click', () => closeModal(DOM.formModal));
+
+        DOM.pricingType.addEventListener('change', (e) => {
+            const val = e.target.value;
+            DOM.priceSingleContainer.classList.toggle('hidden', val !== 'single');
+            DOM.priceRangeContainer.classList.toggle('hidden', val !== 'range');
+            DOM.priceDualContainer.classList.toggle('hidden', val !== 'dual');
+        });
+
+        // View Logic
+        window.viewProduct = function(id) {
+            const p = state.products.find(x => x.id === id);
+            if (!p) return;
+
+            const dateStr = new Date(p.lastUpdated).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+            
+            DOM.viewModalContent.innerHTML = `
+                <div class="mb-6 flex justify-between items-start">
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-900 mb-1 leading-tight">${escapeHTML(p.name)}</h2>
+                        ${p.category ? `<span class="text-xs font-semibold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-md uppercase tracking-wide inline-block border border-slate-200">${escapeHTML(p.category)}</span>` : '<span class="text-xs text-slate-400 italic">Uncategorized</span>'}
+                    </div>
+                    ${p.isPinned ? `<div class="bg-blue-50 text-blue-600 p-2 rounded-full border border-blue-100" title="Pinned"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z"></path></svg></div>` : ''}
+                </div>
+
+                <div class="bg-slate-50 rounded-2xl p-5 border border-slate-100 mb-5">
+                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Pricing Details</h3>
+                    ${p.pricingType === 'range' ? `
+                        <div class="flex items-center justify-between">
+                            <div><div class="text-xs text-slate-500 mb-1">Min Price</div><div class="text-lg font-bold text-slate-800">Rs. ${p.price}</div></div>
+                            <div class="h-px bg-slate-300 w-8 mx-2 mt-4"></div>
+                            <div class="text-right"><div class="text-xs text-slate-500 mb-1">Max Price</div><div class="text-lg font-bold text-slate-800">Rs. ${p.priceMax}</div></div>
+                        </div>
+                    ` : p.pricingType === 'dual' ? `
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between bg-emerald-50 border border-emerald-100 p-3 rounded-xl">
+                                <div class="flex items-center gap-2 text-emerald-800 font-semibold text-sm"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2z"></path></svg> Cash Payment</div>
+                                <div class="text-emerald-900 font-bold text-lg">Rs. ${p.price}</div>
+                            </div>
+                            <div class="flex items-center justify-between bg-amber-50 border border-amber-100 p-3 rounded-xl">
+                                <div class="flex items-center gap-2 text-amber-800 font-semibold text-sm"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> Late Payment</div>
+                                <div class="text-amber-900 font-bold text-lg">Rs. ${p.priceLate}</div>
+                            </div>
+                        </div>
+                    ` : `
+                        <div class="flex items-center justify-between">
+                            <div class="text-sm font-semibold text-slate-500">Fixed Price</div>
+                            <div class="text-2xl font-black text-slate-900">Rs. ${p.price}</div>
+                        </div>
+                    `}
+                </div>
+
+                <div class="flex items-center gap-2 text-xs text-slate-400 justify-center">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    Last updated: ${dateStr}
+                </div>
+            `;
+            
+            DOM.btnEditItem.onclick = () => {
+                closeModal(DOM.viewModal);
+                openEditForm(p);
+            };
+            
+            DOM.btnDeleteItem.onclick = () => {
+                if(confirm(`Are you sure you want to delete ${p.name}?`)) deleteProduct(p.id);
+            };
+
+            openModal(DOM.viewModal);
+        };
+
+        DOM.closeViewBtn.addEventListener('click', () => closeModal(DOM.viewModal));
+        DOM.viewModalBg.addEventListener('click', () => closeModal(DOM.viewModal));
+
+        function openEditForm(p) {
+            document.getElementById('form-modal-title').textContent = 'Edit Price';
+            document.getElementById('item-id').value = p.id;
+            document.getElementById('item-name').value = p.name;
+            document.getElementById('item-category').value = p.category || '';
+            document.getElementById('item-pricing-type').value = p.pricingType || 'single';
+            
+            document.getElementById('item-price').value = p.price || '';
+            document.getElementById('item-price-min').value = p.price || '';
+            document.getElementById('item-price-max').value = p.priceMax || '';
+            document.getElementById('item-price-cash').value = p.price || '';
+            document.getElementById('item-price-late').value = p.priceLate || '';
+            
+            document.getElementById('item-pinned').checked = p.isPinned || false;
+            
+            DOM.pricingType.dispatchEvent(new Event('change'));
+            openModal(DOM.formModal);
+        }
+
+        let db;
+
+        async function saveProduct() {
+            const id = document.getElementById('item-id').value || generateId();
+            const name = document.getElementById('item-name').value.trim();
+            const type = DOM.pricingType.value;
+            
+            if (!name) {
+                showToast("Product name is required", "error");
+                return;
+            }
+
+            const itemData = {
+                id: id,
+                name: name,
+                category: document.getElementById('item-category').value.trim(),
+                pricingType: type,
+                isPinned: document.getElementById('item-pinned').checked,
+                lastUpdated: Date.now(),
+                lastUpdatedBy: state.currentUserUid
+            };
+
+            if (type === 'single') {
+                itemData.price = Number(document.getElementById('item-price').value) || 0;
+            } else if (type === 'range') {
+                itemData.price = Number(document.getElementById('item-price-min').value) || 0;
+                itemData.priceMax = Number(document.getElementById('item-price-max').value) || 0;
+            } else if (type === 'dual') {
+                itemData.price = Number(document.getElementById('item-price-cash').value) || 0;
+                itemData.priceLate = Number(document.getElementById('item-price-late').value) || 0;
+            }
+
+            try {
+                // Rule 1: Strict public path
+                const docRef = doc(db, 'artifacts', state.appId, 'public', 'data', 'products', id);
+                
+                // Set button state to loading
+                const btn = DOM.saveItemBtn;
+                const origText = btn.textContent;
+                btn.innerHTML = '<svg class="animate-spin h-5 w-5 mx-auto text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>';
+                btn.disabled = true;
+
+                await setDoc(docRef, itemData);
+                
+                closeModal(DOM.formModal);
+                showToast("Product saved successfully", "success");
+            } catch (error) {
+                console.error("Save error:", error);
+                showToast("Failed to save product", "error");
+            } finally {
+                DOM.saveItemBtn.textContent = 'Save Product';
+                DOM.saveItemBtn.disabled = false;
+            }
+        }
+
+        async function deleteProduct(id) {
+            try {
+                const docRef = doc(db, 'artifacts', state.appId, 'public', 'data', 'products', id);
+                await deleteDoc(docRef);
+                closeModal(DOM.viewModal);
+                showToast("Product deleted", "info");
+            } catch (error) {
+                console.error("Delete error:", error);
+                showToast("Failed to delete", "error");
+            }
+        }
+
+        DOM.saveItemBtn.addEventListener('click', saveProduct);
+
+        async function initApp() {
+            try {
+                // Firebase Setup
+                const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+                const app = initializeApp(firebaseConfig);
+                const auth = getAuth(app);
+                db = getFirestore(app);
+
+                // Rule 3: Auth BEFORE queries
+                if (typeof __initial_auth_token !== 'undefined') {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+                state.currentUserUid = auth.currentUser.uid;
+
+                // Rule 2: No Complex Queries. Fetch all, sort locally.
+                const productsRef = collection(db, 'artifacts', state.appId, 'public', 'data', 'products');
+                
+                onSnapshot(productsRef, (snapshot) => {
+                    // Handle Real-time notifications for UX requirement
+                    if (!state.isInitialLoad) {
+                        snapshot.docChanges().forEach(change => {
+                            const data = change.doc.data();
+                            // Notify if another user made the change
+                            if (data.lastUpdatedBy !== state.currentUserUid) {
+                                if (change.type === 'added') showToast(`New item added: ${data.name}`, 'info');
+                                if (change.type === 'modified') showToast(`Price updated: ${data.name}`, 'info');
+                                if (change.type === 'removed') showToast(`Item deleted: ${data.name}`, 'error');
+                            }
+                        });
+                    }
+
+                    // Update Local State
+                    state.products = snapshot.docs.map(doc => doc.data());
+                    
+                    // Sort globally A-Z for consistent rendering
+                    state.products.sort((a,b) => a.name.localeCompare(b.name));
+                    
+                    state.isInitialLoad = false;
+                    updateCategoryDatalist();
+                    renderCurrentTab();
+                    
+                }, (error) => {
+                    console.error("Sync Error:", error);
+                    showToast("Error syncing with database", "error");
+                    DOM.homeContent.innerHTML = `<div class="text-center py-10 text-red-500">Failed to load data. Please refresh.</div>`;
+                });
+
+            } catch (error) {
+                console.error("Initialization Error:", error);
+                DOM.homeContent.innerHTML = `<div class="text-center py-10 text-slate-500">Working Offline</div>`;
+            }
+        }
+
+        // Boot
+        initApp();
+
+    </script>
+</body>
+</html>
