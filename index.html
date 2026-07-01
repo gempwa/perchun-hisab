@@ -4,6 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Perchun Hisab</title>
+    
+    <!-- PWA Integration -->
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#047857">
+    <link rel="apple-touch-icon" href="./icon-192x192.png">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -16,10 +22,8 @@
         .animate-slide-right { animation: slideInRight 0.3s ease-out forwards; }
         .animate-toast { animation: slideDown 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
         
-        /* Utility to hide elements cleanly */
         .hidden-view { display: none !important; }
         
-        /* Hide number input spinners */
         input[type=number]::-webkit-inner-spin-button, 
         input[type=number]::-webkit-outer-spin-button { 
             -webkit-appearance: none; 
@@ -29,7 +33,6 @@
             -moz-appearance: textfield;
         }
         
-        /* Ensure active states work on mobile */
         * { -webkit-tap-highlight-color: transparent; }
     </style>
 </head>
@@ -64,11 +67,11 @@
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-semibold text-slate-700 mb-1">Weight (kg)</label>
-                            <input id="in-grossWeight" type="number" inputmode="decimal" class="w-full border border-slate-200 rounded-xl px-4 py-3 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none transition-all font-semibold" placeholder="0">
+                            <input id="in-grossWeight" type="number" step="any" inputmode="decimal" class="w-full border border-slate-200 rounded-xl px-4 py-3 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none transition-all font-semibold" placeholder="0">
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-slate-700 mb-1">Rate / Mun</label>
-                            <input id="in-pricePerMun" type="number" inputmode="decimal" class="w-full border border-slate-200 rounded-xl px-4 py-3 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none transition-all font-semibold" placeholder="0">
+                            <input id="in-pricePerMun" type="number" step="any" inputmode="decimal" class="w-full border border-slate-200 rounded-xl px-4 py-3 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none transition-all font-semibold" placeholder="0">
                         </div>
                     </div>
                 </div>
@@ -89,7 +92,7 @@
                                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-1"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
                                     Auto
                                 </button>
-                                <input id="in-kaat" type="number" inputmode="decimal" class="w-24 text-right bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 focus:ring-2 focus:ring-emerald-400 outline-none font-bold text-slate-800" placeholder="0">
+                                <input id="in-kaat" type="number" step="any" inputmode="decimal" class="w-24 text-right bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 focus:ring-2 focus:ring-emerald-400 outline-none font-bold text-slate-800" placeholder="0">
                             </div>
                         </div>
 
@@ -113,7 +116,7 @@
                                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-1"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
                                     Auto
                                 </button>
-                                <input id="in-totalPrice" type="number" inputmode="decimal" class="w-32 text-right bg-emerald-50 border-b-2 border-emerald-500 px-2 py-1 focus:bg-white outline-none font-black text-xl text-emerald-700 rounded-t-md" placeholder="0">
+                                <input id="in-totalPrice" type="number" step="any" inputmode="decimal" class="w-32 text-right bg-emerald-50 border-b-2 border-emerald-500 px-2 py-1 focus:bg-white outline-none font-black text-xl text-emerald-700 rounded-t-md" placeholder="0">
                             </div>
                         </div>
                     </div>
@@ -229,26 +232,16 @@
 
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        // --- Firebase Config & Setup ---
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        let app, auth, db, currentUser = null;
-        let unsubscribeSnapshot = null;
-        
-        try {
-            app = initializeApp(firebaseConfig);
-            auth = getAuth(app);
-            db = getFirestore(app);
-        } catch (e) {
-            console.error("Firebase init failed:", e);
+    <script>
+        // Register Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js').catch(err => console.error('SW init failed:', err));
+            });
         }
 
         // --- State Management ---
+        const STORAGE_KEY = 'perchun_app_records';
         let currentView = 'form';
         let isKaatManual = false;
         let isPriceManual = false;
@@ -289,46 +282,32 @@
         };
 
         // --- Init Function ---
-        async function init() {
+        function init() {
             attachEventListeners();
-            await initAuth();
+            loadRecords();
         }
 
-        // --- Authentication ---
-        async function initAuth() {
-            if (!auth) return;
+        // --- Local Storage Management ---
+        function loadRecords() {
             try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
+                const stored = localStorage.getItem(STORAGE_KEY);
+                if (stored) {
+                    records = JSON.parse(stored);
                 }
-            } catch (err) {
-                console.error("Auth Error", err);
+            } catch (e) {
+                console.error("Failed to load records from LocalStorage", e);
+                records = [];
             }
-
-            onAuthStateChanged(auth, (user) => {
-                currentUser = user;
-                if (user) {
-                    setupFirestoreListener(user.uid);
-                } else if (unsubscribeSnapshot) {
-                    unsubscribeSnapshot();
-                }
-            });
+            renderHistory();
         }
 
-        function setupFirestoreListener(uid) {
-            if (!db) return;
-            const recordsRef = collection(db, 'artifacts', appId, 'users', uid, 'perchun_records');
-            unsubscribeSnapshot = onSnapshot(recordsRef, (snapshot) => {
-                records = [];
-                snapshot.forEach(doc => records.push({ id: doc.id, ...doc.data() }));
-                records.sort((a, b) => new Date(b.date) - new Date(a.date));
-                renderHistory();
-            }, (error) => {
-                console.error("Firestore error:", error);
-                showToast("Error loading register history");
-            });
+        function saveRecords() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+            } catch (e) {
+                console.error("Failed to save records to LocalStorage", e);
+                showToast("❌ Storage error.");
+            }
         }
 
         // --- Core Logic & Calculations ---
@@ -345,7 +324,6 @@
             const gw = parseFloat(inputs.grossWeight.value) || 0;
             const pm = parseFloat(inputs.pricePerMun.value) || 0;
 
-            // Kaat Logic
             let finalKaat;
             if (isKaatManual) {
                 finalKaat = parseFloat(inputs.kaat.value) || 0;
@@ -356,14 +334,12 @@
                 buttons.autoKaat.classList.add('hidden');
             }
 
-            // Safi & Muns
             const safiWeight = Math.max(0, gw - finalKaat);
             const muns = safiWeight / 40;
 
             outputs.safi.textContent = safiWeight.toFixed(1);
             outputs.muns.textContent = formatMuns(safiWeight);
 
-            // Total Price Logic
             let finalTotal;
             if (isPriceManual) {
                 finalTotal = parseFloat(inputs.totalPrice.value) || 0;
@@ -377,14 +353,9 @@
 
         // --- Event Listeners ---
         function attachEventListeners() {
-            // Live calculations
-            inputs.grossWeight.addEventListener('input', () => {
-                if(!isKaatManual) { /* reset dependency if we want, but auto handles it */ }
-                calculate();
-            });
+            inputs.grossWeight.addEventListener('input', calculate);
             inputs.pricePerMun.addEventListener('input', calculate);
 
-            // Manual Overrides
             inputs.kaat.addEventListener('input', () => {
                 isKaatManual = true;
                 calculate();
@@ -394,7 +365,6 @@
                 calculate();
             });
 
-            // Reset Overrides
             buttons.autoKaat.addEventListener('click', () => {
                 isKaatManual = false;
                 calculate();
@@ -404,7 +374,6 @@
                 calculate();
             });
 
-            // Save & Navigation Actions
             buttons.save.addEventListener('click', handleSave);
             buttons.back.addEventListener('click', () => switchView('form'));
             buttons.copy.addEventListener('click', copyReceipt);
@@ -415,7 +384,7 @@
         }
 
         // --- Actions ---
-        async function handleSave() {
+        function handleSave() {
             const gw = parseFloat(inputs.grossWeight.value);
             const pm = parseFloat(inputs.pricePerMun.value);
 
@@ -440,32 +409,17 @@
                 date: new Date().toISOString()
             };
 
-            if (currentUser && db) {
-                try {
-                    if (editingRecordId) {
-                        const docRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'perchun_records', editingRecordId);
-                        await updateDoc(docRef, record);
-                        showToast("✅ Hisab updated in Register!");
-                    } else {
-                        const recordsRef = collection(db, 'artifacts', appId, 'users', currentUser.uid, 'perchun_records');
-                        await addDoc(recordsRef, record);
-                        showToast("✅ Hisab saved to Register!");
-                    }
-                } catch (err) {
-                    console.error("Save error", err);
-                    showToast("❌ Error saving record");
-                }
+            if (editingRecordId) {
+                const idx = records.findIndex(r => r.id === editingRecordId);
+                if(idx !== -1) records[idx] = { id: editingRecordId, ...record };
+                showToast("✅ Hisab updated!");
             } else {
-                if (editingRecordId) {
-                    const idx = records.findIndex(r => r.id === editingRecordId);
-                    if(idx !== -1) records[idx] = { id: editingRecordId, ...record };
-                    showToast("✅ Hisab updated locally!");
-                } else {
-                    records.unshift({ id: Date.now().toString(), ...record });
-                    showToast("✅ Hisab saved locally!");
-                }
-                renderHistory();
+                records.unshift({ id: Date.now().toString(), ...record });
+                showToast("✅ Hisab saved!");
             }
+            
+            saveRecords();
+            renderHistory();
 
             editingRecordId = null;
             currentRecord = record;
@@ -489,9 +443,9 @@
             if (!currentRecord) return;
             const text = `🌾 *Perchun Hisab* 🌾\n\n` +
                 `👤 Name: ${currentRecord.customerName}\n` +
-                `⚖️ Gross Wt: ${currentRecord.grossWeight} kg\n` +
-                `✂️ Kaat: ${currentRecord.kaat} kg\n` +
-                `✅ Safi Wt: ${currentRecord.safiWeight} kg (${formatMuns(currentRecord.safiWeight)})\n` +
+                `⚖️ Gross Wt: ${Number(currentRecord.grossWeight).toFixed(1)} kg\n` +
+                `✂️ Kaat: ${Number(currentRecord.kaat).toFixed(1)} kg\n` +
+                `✅ Safi Wt: ${Number(currentRecord.safiWeight).toFixed(1)} kg (${formatMuns(currentRecord.safiWeight)})\n` +
                 `💰 Rate: Rs ${currentRecord.pricePerMun} / Mun\n` +
                 `🧾 *Total Amount: Rs ${Math.round(currentRecord.totalPrice).toLocaleString()}*\n\n` +
                 `📅 ${new Date(currentRecord.date).toLocaleString('en-PK')}`;
@@ -526,7 +480,7 @@
         }
 
         let deleteConfirm = false;
-        async function handleDelete() {
+        function handleDelete() {
             if (!currentRecord) return;
             
             if (!deleteConfirm) {
@@ -545,33 +499,26 @@
                 return;
             }
             
-            if (currentUser && db && currentRecord.id) {
-                try {
-                    await deleteDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'perchun_records', currentRecord.id));
-                } catch(err) {
-                    console.error("Delete err", err);
-                }
-            } else {
-                records = records.filter(r => r.id !== currentRecord.id);
-                renderHistory();
-            }
+            records = records.filter(r => r.id !== currentRecord.id);
+            saveRecords();
+            renderHistory();
             
             deleteConfirm = false;
             showToast("🗑️ Record deleted");
             switchView('history');
+            
+            buttons.delete.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg> Delete`;
+            buttons.delete.classList.replace('bg-red-600', 'bg-red-50');
+            buttons.delete.classList.replace('text-white', 'text-red-700');
         }
 
         // --- UI Updates ---
         function switchView(viewName) {
             currentView = viewName;
             
-            // Hide all views
             Object.values(views).forEach(v => v.classList.add('hidden-view'));
-            
-            // Show requested view
             views[viewName].classList.remove('hidden-view');
 
-            // Handle Bottom Nav visibility and active states
             if (viewName === 'receipt') {
                 nav.container.style.display = 'none';
             } else {
@@ -586,9 +533,9 @@
         function populateReceipt(record) {
             document.getElementById('receipt-date').textContent = new Date(record.date).toLocaleString('en-PK');
             document.getElementById('receipt-name').textContent = record.customerName;
-            document.getElementById('receipt-gross').textContent = record.grossWeight;
-            document.getElementById('receipt-kaat').textContent = record.kaat;
-            document.getElementById('receipt-safi').textContent = record.safiWeight;
+            document.getElementById('receipt-gross').textContent = Number(record.grossWeight).toFixed(1);
+            document.getElementById('receipt-kaat').textContent = Number(record.kaat).toFixed(1);
+            document.getElementById('receipt-safi').textContent = Number(record.safiWeight).toFixed(1);
             document.getElementById('receipt-muns').textContent = formatMuns(record.safiWeight);
             document.getElementById('receipt-rate').textContent = record.pricePerMun;
             document.getElementById('receipt-total').textContent = Math.round(record.totalPrice).toLocaleString();
@@ -614,7 +561,7 @@
                     <div>
                         <h4 class="font-bold text-slate-800 text-lg leading-tight">${rec.customerName}</h4>
                         <p class="text-xs font-medium text-slate-500 mt-1">
-                            ${new Date(rec.date).toLocaleDateString('en-PK')} <span class="mx-1">•</span> <span class="text-emerald-700">${rec.safiWeight} kg</span>
+                            ${new Date(rec.date).toLocaleDateString('en-PK')} <span class="mx-1">•</span> <span class="text-emerald-700">${Number(rec.safiWeight).toFixed(1)} kg</span>
                         </p>
                     </div>
                     <div class="text-right">
@@ -630,7 +577,6 @@
             });
         }
 
-        // Toast logic
         let toastTimeout;
         function showToast(msg) {
             const t = document.getElementById('toast-container');
@@ -645,7 +591,6 @@
             }, 3000);
         }
 
-        // Start
         init();
     </script>
 </body>
